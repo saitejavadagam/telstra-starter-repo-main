@@ -2,8 +2,11 @@ package au.com.telstra.simcardactivator.Service;
 
 
 import au.com.telstra.simcardactivator.Entity.AcutatorResponse;
+import au.com.telstra.simcardactivator.Entity.Customer;
+import au.com.telstra.simcardactivator.Repository.SIMActivatorRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -17,23 +20,25 @@ public class AcutatorService {
     public static final String AcutatorURl = "http://localhost:8444/acutate";
     public static final Logger log = LoggerFactory.getLogger(AcutatorService.class);
 
-    public boolean activateSIM(String iccid) {
+    @Autowired
+    SIMActivatorRepository simActivatorRepository;
+
+    public Customer activateSIM(String iccid, String customerEmail) {
 
         RestTemplate restTemplate = new RestTemplate();
 
-        try {
-            Map<String,String> payload = new HashMap<String,String>();
-            payload.put("ICCID",iccid);
+        Map<String, String> payload = new HashMap<>();
+        payload.put("iccid", iccid);
+        boolean success = restTemplate.postForObject(AcutatorURl, payload, AcutatorResponse.class).isSuccess();
 
-            AcutatorResponse acutatorResponse = restTemplate.postForObject(AcutatorURl,payload,AcutatorResponse.class);
+        Customer customer = new Customer(iccid,customerEmail,success);
 
-            if(acutatorResponse==null)log.info("SimCarAcutator Not Started");
-            return acutatorResponse!=null && acutatorResponse.isSuccess();
-        }
-        catch(Exception e) {
-            e.printStackTrace();
-            return false;
-        }
+        return simActivatorRepository.save(customer);
 
     }
+
+    public Customer getCustomerById(String iccid) {
+        return simActivatorRepository.getByIccid(iccid);
+    }
+
 }
